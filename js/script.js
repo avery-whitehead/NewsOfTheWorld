@@ -33,6 +33,13 @@ function loadMap() {
 
     stamenWatercolor.addTo(map);
     stamenLabels.addTo(map);
+    map.on('click', onMapClick);
+}
+
+function onMapClick(event) {
+    console.log(event.latlng);
+    // TODO: lookup with lat/long
+    // Example JSON search: https://nominatim.openstreetmap.org/reverse?format=json&lat=54.77639823271888&lon=-2.7603149414062504&addressdetails=1
 }
 
 window.onload = loadMap;
