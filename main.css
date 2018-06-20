@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css?family=Encode+Sans+Semi+Expanded|Cinzel+Decorative:700');
+
+#nav {
+    height: 8%;
+}
+
+.navbar-brand {
+    font-size: 28px !important;
+    font-family: 'Cinzel Decorative', cursive;
+}
+
+.nav-link {
+    font-family: 'Encode Sans Semi Expanded', sans-serif;
+    font-size: 28px;
+}
+
+#id-map {
+    height: 92%;
+}
+
+.home {
+    margin: 0 10% 0 -10%;
+}
