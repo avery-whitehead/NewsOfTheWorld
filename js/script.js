@@ -37,7 +37,7 @@ function loadMap() {
 }
 
 function onMapClick(event) {
-    console.log(event.latlng);
+    console.log(event.latlng.wrap());
     // TODO: lookup with lat/long
     // Example JSON search: https://nominatim.openstreetmap.org/reverse?format=json&lat=54.77639823271888&lon=-2.7603149414062504&addressdetails=1
 }
