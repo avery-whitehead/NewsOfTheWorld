@@ -1,12 +1,15 @@
-@import url('https://fonts.googleapis.com/css?family=Encode+Sans+Semi+Expanded|Cinzel+Decorative:700');
+@import url('https://fonts.googleapis.com/css?family=Encode+Sans+Semi+Expanded|Cinzel+Decorative:700|Material+Icons');
 
 #nav {
     height: 6%;
+    background-color: #DDDDDD;
 }
 
 .navbar-brand {
     font-size: 22px !important;
     font-family: 'Cinzel Decorative', cursive;
+    color: rgba(0, 0, 0, 0.7) !important;
+    font-weight: 700;
 }
 
 .nav-link {
