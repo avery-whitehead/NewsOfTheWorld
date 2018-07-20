@@ -122,12 +122,12 @@ function searchNews(address) {
  * @return {*} An array of objects containing the headline, link, description and image
  */
 function getHeadlines(rssXml) {
-    console.log('hi');
     let x2js = new X2JS();
     let rssJson = x2js.xml_str2json(rssXml);
     console.log(rssJson);
     let items = rssJson.rss.channel.item;
     for (let i = 1; i < items.length; i++) {
+        //TODO: Create array of objects out of the values in items[i]
         console.log(items[i].title);
     }
 }
