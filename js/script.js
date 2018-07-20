@@ -44,6 +44,7 @@ function loadMap() {
     map.on('click', onMapClick);
 }
 
+
 /**
  * Listener function taking an event object, performs an OSM reverse lookup
  * on the latitude and longitude returned from a click event
@@ -59,7 +60,7 @@ function onMapClick(event) {
         `&lon=${latlng.lng}` +
         '&addressdetails=1' + 
         '&accept-language=en';
-    let address = fetchRequest(url, 'application/json');
+    let address = fetchRequest(url, 'application/json', 'cors');
     // Resolves the promise returned from the fetch
     address.then(response => {
         let json = JSON.parse(response).address;
@@ -67,6 +68,7 @@ function onMapClick(event) {
         searchNews(json);
     });
 }
+
 
 /**
  * Returns a Google News RSS feed for a query of this address
@@ -80,43 +82,49 @@ function searchNews(address) {
     let national = '';
 
     //TODO: better hierarchy
-    if (address.suburb !== undefined) {
-        local = address.suburb;
-    } else if (address.city_district !== undefined) {
-        local = address.city_district;
-    } else if (address.town !== undefined) {
-        local = address.town;
-    } else if (address.city !== undefined) {
-        local = address.city;
+    if (address === undefined) {
+        console.log('No information found');
+    } else {
+        if (address.suburb !== undefined) {
+            local = address.suburb;
+        } else if (address.city_district !== undefined) {
+            local = address.city_district;
+        } else if (address.town !== undefined) {
+            local = address.town;
+        } else if (address.city !== undefined) {
+            local = address.city;
+        }
+
+        if (address.county !== undefined) {
+            national = address.county;
+        } else if (address.state_district !== undefined) {
+            national = address.state_district;
+        } else if (address.state !== undefined) {
+            national = address.state;
+        } else if (address.country !== undefined) {
+            national = address.country;
+        }
+        // Transliterate and remove any special characters (slugify)
+        local = slugify(local);
+        national = slugify(national);
+        let cors = 'https://cors-anywhere.herokuapp.com'
+        let url = `${cors}/https://news.google.com/news?q=${local}+${national}&output=rss`;
+        console.log(url)
+        let rss = fetchRequest(url, 'application/rss+xml', 'cors');
+        rss.then(function(response) {
+            console.log(response);
+        });
     }
-
-    if (address.county !== undefined) {
-        national = address.county;
-    } else if (address.state_district !== undefined) {
-        national = address.state_district;
-    } else if (address.state !== undefined) {
-        national = address.state;
-    } else if (address.country !== undefined) {
-        national = address.country;
-    }
-
-    // Transliterate and remove any special characters (slugify)
-    local = slugify(local);
-    national = slugify(national);
-
-    let url = `https://news.google.com/news?q=${local}+${national}&output=rss`;
-    let rss = fetchRequest(url, 'application/rss+xml');
-    rss.then(response => {
-        console.log(response);
-    });
 }
+
 
 /**
  * A generic fetch request to get some data from a REST API
  * @param {*} url The URI to fetch from
  * @param {*} contentType The content type to put in the header 
+ * @param {*} mode The mode to be used for the request (cors, no-cors)
  */
-function fetchRequest(url, contentType) {
+function fetchRequest(url, contentType, mode) {
     //TODO: fix lookup
     return fetch(url, {
         cache: 'default',
@@ -126,9 +134,14 @@ function fetchRequest(url, contentType) {
             'content-type': contentType
         },
         method: 'GET',
+        mode: mode,
         referrer: 'client'
-    })
-    .then(response => response.text());
+    }).then(function(response) {
+        return response.text();
+    }).catch(function(error) {
+        console.log(error.message)
+    });
 }
+
 
 window.onload = loadMap;
