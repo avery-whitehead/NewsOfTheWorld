@@ -75,19 +75,17 @@ function onMapClick(event) {
  * Looks for the most local existing values for urban area and
  * administrative area, and uses those for the query
  * @param {json} address JSON-formatted address information
- * @return {string} Some stuff about the news (headline, body, etc)
  */
 function searchNews(address) {
     let local = '';
-    let national = '';
+    let regional = '';
+    let national = address.country;
 
-    //TODO: better hierarchy
+
     if (address === undefined) {
         console.log('No information found');
     } else {
-        if (address.suburb !== undefined) {
-            local = address.suburb;
-        } else if (address.city_district !== undefined) {
+        if (address.city_district !== undefined) {
             local = address.city_district;
         } else if (address.town !== undefined) {
             local = address.town;
@@ -96,24 +94,41 @@ function searchNews(address) {
         }
 
         if (address.county !== undefined) {
-            national = address.county;
+            regional = address.county;
         } else if (address.state_district !== undefined) {
-            national = address.state_district;
+            regional = address.state_district;
         } else if (address.state !== undefined) {
-            national = address.state;
-        } else if (address.country !== undefined) {
-            national = address.country;
+            regional = address.state;
         }
+
         // Transliterate and remove any special characters (slugify)
         local = slugify(local);
+        regional = slugify(regional);
         national = slugify(national);
         let cors = 'https://cors-anywhere.herokuapp.com'
-        let url = `${cors}/https://news.google.com/news?q=${local}+${national}&output=rss`;
+        let url = `${cors}/https://news.google.com/news?q=${local}+${regional}&output=rss`;
         console.log(url)
         let rss = fetchRequest(url, 'application/rss+xml', 'cors');
         rss.then(function(response) {
-            console.log(response);
+            getHeadlines(response);
         });
+    }
+}
+
+/**
+ * Converts the RSS XML returned from the Google News query into a JSON
+ * object to easily get the headline values from the keys
+ * @param {*} rssXml
+ * @return {*} An array of objects containing the headline, link, description and image
+ */
+function getHeadlines(rssXml) {
+    console.log('hi');
+    let x2js = new X2JS();
+    let rssJson = x2js.xml_str2json(rssXml);
+    console.log(rssJson);
+    let items = rssJson.rss.channel.item;
+    for (let i = 1; i < items.length; i++) {
+        console.log(items[i].title);
     }
 }
 
@@ -123,6 +138,7 @@ function searchNews(address) {
  * @param {*} url The URI to fetch from
  * @param {*} contentType The content type to put in the header 
  * @param {*} mode The mode to be used for the request (cors, no-cors)
+ * @return {string} The body of the response given to the fetch request
  */
 function fetchRequest(url, contentType, mode) {
     //TODO: fix lookup
