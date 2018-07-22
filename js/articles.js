@@ -1,4 +1,32 @@
 /**
+ * Class definition for an Article. Each click on the map returns up to
+ * five Article objects
+ * @param {string} title The title of the article
+ * @param {string} description A short description of the article contents
+ * @param {string} link A link to the article
+ * @param {string} picture A picture associated with the article
+ */
+class Article {
+    constructor(title, description, link, picture) {
+        this.title = title;
+        this.description = description;
+        this.link = link;
+        this.picture = picture;
+    }
+
+    /**
+     * Prints each attribute value to the console
+     */
+    printArticle() {
+        console.log(this.title);
+        console.log(this.description);
+        console.log(this.link);
+        console.log(this.picture);
+    }
+}
+
+
+/**
  * Loads the Leaflet map and applies the layers to it
  */
 function loadMap() {
@@ -48,7 +76,7 @@ function loadMap() {
 /**
  * Listener function taking an event object, performs an OSM reverse lookup
  * on the latitude and longitude returned from a click event
- * @param {object} event An event object that fires when the map is clicked on
+ * @param {*} event An event object that fires when the map is clicked on
  */
 function onMapClick(event) {
     let latlng = event.latlng.wrap();
@@ -74,14 +102,13 @@ function onMapClick(event) {
  * Returns a Google News RSS feed for a query of this address
  * Looks for the most local existing values for urban area and
  * administrative area, and uses those for the query
- * @param {json} address JSON-formatted address information
+ * @param {*} address JSON-formatted address information
  */
 function searchNews(address) {
     let local = '';
     let regional = '';
-    let national = address.country;
 
-
+    //TODO: default to address.country if nothing found
     if (address === undefined) {
         console.log('No information found');
     } else {
@@ -99,45 +126,74 @@ function searchNews(address) {
             regional = address.state_district;
         } else if (address.state !== undefined) {
             regional = address.state;
+        } else if (address.country !== undefined) {
+            regional = address.country;
         }
 
         // Transliterate and remove any special characters (slugify)
-        local = slugify(local);
-        regional = slugify(regional);
-        national = slugify(national);
+        localSrch = slugify(local);
+        regionalSrch = slugify(regional);
         let cors = 'https://cors-anywhere.herokuapp.com'
-        let url = `${cors}/https://news.google.com/news?q=${local}+${regional}&output=rss`;
+        let url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
         console.log(url)
         let rss = fetchRequest(url, 'application/rss+xml', 'cors');
         rss.then(function(response) {
-            getHeadlines(response);
+            let articles = getArticles(response);
+            articles.forEach(function(article) {
+                article.printArticle();
+            });
         });
     }
 }
 
 /**
  * Converts the RSS XML returned from the Google News query into a JSON
- * object to easily get the headline values from the keys
- * @param {*} rssXml
- * @return {*} An array of objects containing the headline, link, description and image
+ * object to easily get the article values from the keys
+ * @param {string} rssXml
+ * @return {[Article]} An array of Article objects containing the title, description,
+ * link and an image
  */
-function getHeadlines(rssXml) {
+function getArticles(rssXml) {
+    const ITEM_COUNT = 5
+    let articles = [];
     let x2js = new X2JS();
     let rssJson = x2js.xml_str2json(rssXml);
     console.log(rssJson);
     let items = rssJson.rss.channel.item;
-    for (let i = 1; i < items.length; i++) {
-        //TODO: Create array of objects out of the values in items[i]
-        console.log(items[i].title);
+    // First item is a deprecation warning, not a news article
+    for (let i = 1; i <= ITEM_COUNT; i++) {
+        let title = items[i].title;
+        let desc = getDescription(items[i].description);
+        // Link is prefixed by a Google News URL separated by '&url='
+        let link = items[i].link.split('&url=')[1]
+        // TODO: Find an image search API and search the title to get an image
+        let image = ''
+        articles.push(new Article(title, desc, link, image));
     }
+    return articles
+}
+
+
+/**
+ * Parses the HTML table in the RSS XML and uses a CSS selector to get the
+ * description text
+ * @param {string} descHtml The HTML table containing the description
+ * @return {string} The description text extracted from the table
+ */
+function getDescription(descHtml) {
+    let parser = new DOMParser();
+    let selector = 'body > table > tbody > tr > td.j > font > div.lh > font:nth-child(5)';
+    let parsedDesc = parser.parseFromString(descHtml, 'text/html');
+    let desc = parsedDesc.querySelector(selector).innerHTML;
+    return desc;
 }
 
 
 /**
  * A generic fetch request to get some data from a REST API
- * @param {*} url The URI to fetch from
- * @param {*} contentType The content type to put in the header 
- * @param {*} mode The mode to be used for the request (cors, no-cors)
+ * @param {string} url The URI to fetch from
+ * @param {string} contentType The content type to put in the header 
+ * @param {string} mode The mode to be used for the request (cors, no-cors)
  * @return {string} The body of the response given to the fetch request
  */
 function fetchRequest(url, contentType, mode) {
