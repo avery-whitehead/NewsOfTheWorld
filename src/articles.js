@@ -82,7 +82,9 @@ function loadMap() {
     stamenLabels.addTo(map);
     map.on('click', function(event) {
         onMapClick(event);
-        toggleSidebar(sidebar);
+        if (!sidebar.isVisible()) {
+            sidebar.show();
+        }
     });
 }
 
@@ -147,24 +149,27 @@ function searchNews(address) {
         // Transliterate and remove any special characters (slugify)
         let localSrch = slugify(local);
         let regionalSrch = slugify(regional);
+        let national = address.country;
         let cors = 'https://cors-anywhere.herokuapp.com'
         let url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
         let rss = fetchRequest(url, 'application/rss+xml', 'cors');
         rss.then(function(response) {
             let articles = getArticles(response);
             if (articles.length == 0) {
-                let nationalSrch = slugify(address.country);
+                let nationalSrch = slugify(national);
                 url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
                 rss = fetchRequest(url, 'application/rss+xml', 'cors');
                 rss.then(function(response) {
                     articles = getArticles(response);
                     articles.forEach(function (article) {
                         article.printArticle();
+                        setSidebarTitle(local, regional, national);
                     });
                 })
             }
             articles.forEach(function(article) {
                 article.printArticle();
+                setSidebarTitle(local, regional, national);
             });
         });
     }
