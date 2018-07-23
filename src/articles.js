@@ -51,7 +51,7 @@ function loadMap() {
     let mapBounds = [[-8576 / 2, -8576 / 2], [8576 / 2, 8576 / 2]];
 
     // Background map layer
-    let stamenWatercolor = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}{r}.png', {
+    let stamenWatercolor = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png', {
         attribution: 'Map tiles by <a href="http://stamen.com">' +
             'Stamen Design</a>, ' +
             '<a href="http://creativecommons.org/licenses/by/3.0">' +
@@ -65,7 +65,7 @@ function loadMap() {
     });
 
     // Borders and cities layer
-    let stamenLabels = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}{r}.png', {
+    let stamenLabels = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png', {
         attribution: 'Map tiles by <a href="http://stamen.com">' +
             'Stamen Design</a>, ' +
             '<a href="http://creativecommons.org/licenses/by/3.0">' +
@@ -145,14 +145,24 @@ function searchNews(address) {
         }
 
         // Transliterate and remove any special characters (slugify)
-        localSrch = slugify(local);
-        regionalSrch = slugify(regional);
+        let localSrch = slugify(local);
+        let regionalSrch = slugify(regional);
         let cors = 'https://cors-anywhere.herokuapp.com'
         let url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
-        console.log(url)
         let rss = fetchRequest(url, 'application/rss+xml', 'cors');
         rss.then(function(response) {
             let articles = getArticles(response);
+            if (articles.length == 0) {
+                let nationalSrch = slugify(address.country);
+                url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
+                rss = fetchRequest(url, 'application/rss+xml', 'cors');
+                rss.then(function(response) {
+                    articles = getArticles(response);
+                    articles.forEach(function (article) {
+                        article.printArticle();
+                    });
+                })
+            }
             articles.forEach(function(article) {
                 article.printArticle();
             });
@@ -164,25 +174,31 @@ function searchNews(address) {
  * Converts the RSS XML returned from the Google News query into a JSON
  * object to easily get the article values from the keys
  * @param {string} rssXml
- * @return {[Article]} An array of Article objects containing the title, description,
- * link and an image
+ * @return {[Article]} An array of (at most five) Article objects containing
+ * the title, description link and an image
  */
 function getArticles(rssXml) {
-    const ITEM_COUNT = 5
+    let ITEM_COUNT = 5;
     let articles = [];
     let x2js = new X2JS();
     let rssJson = x2js.xml_str2json(rssXml);
     console.log(rssJson);
     let items = rssJson.rss.channel.item;
     // First item is a deprecation warning, not a news article
-    for (let i = 1; i <= ITEM_COUNT; i++) {
-        let title = items[i].title;
-        let desc = getDescription(items[i].description);
-        // Link is prefixed by a Google News URL separated by '&url='
-        let link = items[i].link.split('&url=')[1]
-        // TODO: Find an image search API and search the title to get an image
-        let image = ''
-        articles.push(new Article(title, desc, link, image));
+    if (items.length != undefined) {
+        // Stop array from going out of bounds if there's less than five articles
+        if (items.length <= 6) {
+            ITEM_COUNT = item.length;
+        }
+        for (let i = 1; i <= ITEM_COUNT; i++) {
+            let title = items[i].title;
+            let desc = getDescription(items[i].description);
+            // Link is prefixed by a Google News URL separated by '&url='
+            let link = items[i].link.split('&url=')[1]
+            // TODO: Find an image search API and search the title to get an image
+            let image = ''
+            articles.push(new Article(title, desc, link, image));
+        }
     }
     return articles
 }
@@ -211,7 +227,7 @@ function getDescription(descHtml) {
  * @return {string} The body of the response given to the fetch request
  */
 function fetchRequest(url, contentType, mode) {
-    //TODO: fix lookup
+    console.log(url)
     return fetch(url, {
         cache: 'default',
         credentials: 'same-origin',
