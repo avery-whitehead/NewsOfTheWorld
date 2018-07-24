@@ -9,9 +9,21 @@ function setSidebarTitle(local, regional, national) {
     if (local != '') {
         displayString += `${local}, `;
     }
-    if (regional != '') {
+    if (regional != ''  && local != regional) {
         displayString += `${regional}, `;
     }
     displayString += `${national}`;
     document.getElementById('sidebar-title').innerHTML =displayString;
+}
+
+
+/**
+ * Sets the body of the sidebar to read the news articles returned
+ * by the search
+ * @param {Array[Article]} articles An array of Article objects
+ */
+function setSidebarBody(articles) {
+    articles.forEach(function (article) {
+        article.printArticle();
+    });
 }

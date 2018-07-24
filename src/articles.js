@@ -84,7 +84,7 @@ function loadMap() {
         onMapClick(event);
         if (!sidebar.isVisible()) {
             sidebar.show();
-        }
+        };
     });
 }
 
@@ -123,6 +123,7 @@ function onMapClick(event) {
 function searchNews(address) {
     let local = '';
     let regional = '';
+    let url = '';
 
     //TODO: default to address.country if nothing found
     if (address === undefined) {
@@ -142,35 +143,46 @@ function searchNews(address) {
             regional = address.state_district;
         } else if (address.state !== undefined) {
             regional = address.state;
-        } else if (address.country !== undefined) {
-            regional = address.country;
         }
 
         // Transliterate and remove any special characters (slugify)
         let localSrch = slugify(local);
         let regionalSrch = slugify(regional);
         let national = address.country;
+        let state = ''
+        if (address.state != undefined) {
+            state = address.state;
+        }
+        // China's country value is 'PRC' which results in some messy results
+        if (national == 'PRC') {
+            national = 'China'
+        }
         let cors = 'https://cors-anywhere.herokuapp.com'
-        let url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
+        console.log(localSrch);
+        // Some address lookups only return the country
+        if (localSrch == '' && regionalSrch == '') {
+            url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
+        } else {
+            url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
+        }
         let rss = fetchRequest(url, 'application/rss+xml', 'cors');
         rss.then(function(response) {
             let articles = getArticles(response);
             if (articles.length == 0) {
                 let nationalSrch = slugify(national);
-                url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
+                let stateSrch = slugify(state);
+                url = `${cors}/https://news.google.com/news?q=${stateSrch}+${nationalSrch}&output=rss`;
                 rss = fetchRequest(url, 'application/rss+xml', 'cors');
                 rss.then(function(response) {
                     articles = getArticles(response);
-                    articles.forEach(function (article) {
-                        article.printArticle();
-                        setSidebarTitle(local, regional, national);
-                    });
-                })
-            }
-            articles.forEach(function(article) {
-                article.printArticle();
+                    setSidebarTitle(local, regional, national);
+                    setSidebarBody(articles);
+                });
+            } else {
+                articles = getArticles(response);
                 setSidebarTitle(local, regional, national);
-            });
+                setSidebarBody(articles);
+            }
         });
     }
 }
@@ -216,6 +228,7 @@ function getArticles(rssXml) {
  * @return {string} The description text extracted from the table
  */
 function getDescription(descHtml) {
+    console.log(descHtml);
     let parser = new DOMParser();
     let selector = 'body > table > tbody > tr > td.j > font > div.lh > font:nth-child(5)';
     let parsedDesc = parser.parseFromString(descHtml, 'text/html');
