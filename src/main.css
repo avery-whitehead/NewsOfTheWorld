@@ -37,7 +37,7 @@ img {
 .navbar-brand {
     font-size: 26px !important;
     font-family: 'Lobster', cursive;
-    color: rgba(0, 0, 0, 0.7) !important;
+    color: rgb(66,66,66) !important;
     font-weight: 700;
 }
 
@@ -53,4 +53,12 @@ img {
 
 #map {
     height: 94%;
+}
+
+.modal-title {
+    color: rgb(66,66,66);
+}
+
+.modal-body {
+    color: rgb(97,97,97)
 }

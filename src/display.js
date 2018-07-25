@@ -1,3 +1,4 @@
+
 /**
  * Sets the title of the sidebar to read the location searched for
  * @param {*} local The local-level search term
@@ -7,13 +8,14 @@
 function setSidebarTitle(local, regional, national) {
     let displayString = '';
     if (local != '') {
-        displayString += `${local}, `;
+        displayString += `${local}, <br>`;
     }
-    if (regional != ''  && local != regional) {
-        displayString += `${regional}, `;
+    if (regional != '' && local != regional) {
+        displayString += `${regional}, <br>`;
     }
+
     displayString += `${national}`;
-    document.getElementById('sidebar-title').innerHTML =displayString;
+    document.getElementById('sidebar-title').innerHTML = displayString;
 }
 
 
@@ -31,6 +33,11 @@ function setSidebarTitle(local, regional, national) {
  * @param {Array[Article]} articles An array of Article objects
  */
 function setSidebarBody(articles) {
+    // If no articles were returned by the search
+    if (articles.length === 0) {
+        console.log('No articles found');
+    }
+
     articles.forEach(function (article) {
         article.printArticle();
         let card = document.createElement('div');

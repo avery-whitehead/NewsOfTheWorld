@@ -44,6 +44,11 @@ function loadMap() {
 
     setTimeout(function() {
         document.getElementById('sidebar').style.display = 'block';
+        // If not on mobile device, show sidebar at start
+        let mobile = window.matchMedia('(max-width: 767px)');
+        if (!mobile.matches) {
+            sidebar.show();
+        }
     }, 500);
 
     let mapMaxZoom = 12;
@@ -90,7 +95,7 @@ function loadMap() {
 
 
 /**
- * Listener function taking an event object, performs an OSM reverse lookup
+ * Listener function taking an event object, performs a reverse geocode lookup
  * on the latitude and longitude returned from a click event
  * @param {*} event An event object that fires when the map is clicked on
  */
@@ -98,95 +103,107 @@ function onMapClick(event) {
     let latlng = event.latlng.wrap();
     console.log(latlng)
     // Reverse address lookup from latlng
-    let url = 'https://nominatim.openstreetmap.org/reverse?' +
-        'format=json' +
+    let url = 'https://eu1.locationiq.org/v1/reverse.php?key=ce51d023f628dc' +
         `&lat=${latlng.lat}` +
         `&lon=${latlng.lng}` +
+        '&format=json' +
+        '&zoom=12' +
         '&addressdetails=1' + 
-        '&accept-language=en';
-    let address = fetchRequest(url, 'application/json', 'cors');
+        '&extratags=1';
+    let address = fetchRequest(url, 'cors');
     // Resolves the promise returned from the fetch
     address.then(response => {
-        let json = JSON.parse(response).address;
-        console.log(json);
-        searchNews(json);
+        let json = JSON.parse(response);
+        setSidebarTitle(json);
+        getAddressDetails(json);
     });
 }
 
 
 /**
- * Returns a Google News RSS feed for a query of this address
- * Looks for the most local existing values for urban area and
- * administrative area, and uses those for the query
- * @param {JSON} address JSON-formatted address information
+ * Creates a hierarchical search string based on an address
+ * @param {JSON} addressJson The address in JSON format
  */
-function searchNews(address) {
+function getAddressDetails(addressJson) {
+    console.log(addressJson.address);
+    let address = addressJson.address;
+    let searchString = '';
     let local = '';
     let regional = '';
-    let national = ''
-    let url = '';
+    let national = address.country;
 
-    //TODO: default to address.country if nothing found
-    if (address === undefined) {
-        console.log('No information found');
-    } else {
-        if (address.city_district !== undefined) {
-            local = address.city_district;
-        } else if (address.town !== undefined) {
-            local = address.town;
-        } else if (address.city !== undefined) {
-            local = address.city;
-        }
-
-        if (address.county !== undefined) {
-            regional = address.county;
-        } else if (address.state_district !== undefined) {
-            regional = address.state_district;
-        } else if (address.state !== undefined) {
-            regional = address.state;
-        }
-
-        national = address.country;
-
-        // Transliterate and remove any special characters (slugify)
-        let localSrch = slugify(local);
-        let regionalSrch = slugify(regional);
-        let nationalSrch = slugify(national);
-        let state = ''
-        if (address.state !== undefined) {
-            state = address.state;
-        }
-        // China's country value is 'PRC' which results in some messy results
-        if (national == 'PRC') {
-            national = 'China'
-        }
-        let cors = 'https://cors-anywhere.herokuapp.com'
-        // Some address lookups only return the country
-        if (localSrch === '' && regionalSrch === '') {
-            url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
-        } else {
-            url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
-        }
-        let rss = fetchRequest(url, 'application/rss+xml', 'cors');
-        rss.then(function(response) {
-            let articles = getArticles(response);
-            if (articles.length == 0) {
-                let stateSrch = slugify(state);
-                url = `${cors}/https://news.google.com/news?q=${stateSrch}+${nationalSrch}&output=rss`;
-                rss = fetchRequest(url, 'application/rss+xml', 'cors');
-                rss.then(function(response) {
-                    articles = getArticles(response);
-                    setSidebarTitle(local, regional, national);
-                    setSidebarBody(articles);
-                });
-            } else {
-                articles = getArticles(response);
-                setSidebarTitle(local, regional, national);
-                setSidebarBody(articles);
-            }
-        });
+    if (address.suburb !== undefined) {
+        local = address.suburb;
+    } else if (address.village !== undefined) {
+        local = address.village;
+    } else if (address.town !== undefined) {
+        local = address.town;
+    } else if (address.city !== undefined) {
+        local = address.city;
     }
+
+    if (address.county !== undefined) {
+        regional = address.county;
+    } else if (address.region !== undefined) {
+        regional = address.region;
+    } else if (address.state !== undefined) {
+        regional = address.state;
+    }
+
+    // Extends short country names
+    if (national === 'PRC') 
+        national = 'China';
+    if (national === 'ROC')
+        national = 'Thailand';
+    setSidebarTitle(local, regional, national);
+    searchNews(local, regional, national);
 }
+
+/**
+ * Uses the local, regional and national address terms to perform
+ * a Google News RSS search
+ * @param {*} local 
+ * @param {*} regional 
+ * @param {*} national 
+ */
+function searchNews(local, regional, national) {
+    let cors = 'https://cors-anywhere.herokuapp.com';
+    let url = '';
+    let localSrch = slugify(local);
+    let regionalSrch = slugify(regional);
+    let nationalSrch = slugify(national);
+    let articles = [];
+    let didNationalSrch = false;
+
+    // If the address lookup only returned the country
+    if (localSrch == '' && regionalSrch == '') {
+        url = `${cors}/https://news.google.com/news?` +
+            `q=${nationalSrch}&output=rss`;
+        didNationalSrch = true;
+    } else {
+        url = `${cors}/https://news.google.com/news?` +
+            `q=${localSrch}+${regionalSrch}&output=rss`;
+    }
+
+    let rss = fetchRequest(url, 'cors');
+    rss.then(function(response) {
+        articles = getArticles(response);
+        // If no articles are returned by the local/regional search
+        if (articles.length === 0 && didNationalSrch === false) {
+            url = `${cors}/https://news.google.com/news?` + 
+                `q=${nationalSrch}&output=rss`;
+            rss = fetchRequest(url, 'cors');
+            rss.then(function(response) {
+                console.log
+                articles = getArticles(response);
+                setSidebarBody(articles);
+            })
+        } else {
+            setSidebarBody(articles);
+        }
+    });
+}
+
 
 /**
  * Converts the RSS XML returned from the Google News query into a JSON
@@ -250,7 +267,6 @@ function getTextFromArticle(textType, html) {
 /**
  * A generic fetch request to get some data from a REST API
  * @param {string} url The URI to fetch from
- * @param {string} contentType The content type to put in the header 
  * @param {string} mode The mode to be used for the request (cors, no-cors)
  * @return {string} The body of the response given to the fetch request
  */
@@ -259,8 +275,7 @@ function fetchRequest(url, contentType, mode) {
         cache: 'default',
         credentials: 'same-origin',
         headers: {
-            'user-agent': window.navigator.userAgent,
-            'content-type': contentType
+            'user-agent': window.navigator.userAgent
         },
         method: 'GET',
         mode: mode,
