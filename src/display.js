@@ -20,10 +20,24 @@ function setSidebarTitle(local, regional, national) {
 /**
  * Sets the body of the sidebar to read the news articles returned
  * by the search
+ * Card structure:
+ *  <div class="card">
+ *      <div class="card-body">
+ *          <h5 class="card-title"></h5>
+ *          <h6 class="card-subtitle mb-2 text-muted></h6>"
+ *          <p class="card-text"></p>
+ *      </div>
+ *  </div>
  * @param {Array[Article]} articles An array of Article objects
  */
 function setSidebarBody(articles) {
     articles.forEach(function (article) {
         article.printArticle();
+        let card = document.createElement('div');
+        card.className = 'card';
+        let cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+        let cardTitle = document.createElement('h5');
+        cardTitle.className = 'card-title';
     });
 }

@@ -4,14 +4,14 @@
  * @param {string} title The title of the article
  * @param {string} description A short description of the article contents
  * @param {string} link A link to the article
- * @param {string} picture A picture associated with the article
+ * @param {string} site The site this article comes from
  */
 class Article {
-    constructor(title, description, link, picture) {
+    constructor(title, description, link, site) {
         this.title = title;
         this.description = description;
         this.link = link;
-        this.picture = picture;
+        this.site = site;
     }
 
     /**
@@ -21,7 +21,7 @@ class Article {
         console.log(this.title);
         console.log(this.description);
         console.log(this.link);
-        console.log(this.picture);
+        console.log(this.site);
     }
 }
 
@@ -123,6 +123,7 @@ function onMapClick(event) {
 function searchNews(address) {
     let local = '';
     let regional = '';
+    let national = ''
     let url = '';
 
     //TODO: default to address.country if nothing found
@@ -145,12 +146,14 @@ function searchNews(address) {
             regional = address.state;
         }
 
+        national = address.country;
+
         // Transliterate and remove any special characters (slugify)
         let localSrch = slugify(local);
         let regionalSrch = slugify(regional);
-        let national = address.country;
+        let nationalSrch = slugify(national);
         let state = ''
-        if (address.state != undefined) {
+        if (address.state !== undefined) {
             state = address.state;
         }
         // China's country value is 'PRC' which results in some messy results
@@ -158,9 +161,8 @@ function searchNews(address) {
             national = 'China'
         }
         let cors = 'https://cors-anywhere.herokuapp.com'
-        console.log(localSrch);
         // Some address lookups only return the country
-        if (localSrch == '' && regionalSrch == '') {
+        if (localSrch === '' && regionalSrch === '') {
             url = `${cors}/https://news.google.com/news?q=${nationalSrch}&output=rss`;
         } else {
             url = `${cors}/https://news.google.com/news?q=${localSrch}+${regionalSrch}&output=rss`;
@@ -169,7 +171,6 @@ function searchNews(address) {
         rss.then(function(response) {
             let articles = getArticles(response);
             if (articles.length == 0) {
-                let nationalSrch = slugify(national);
                 let stateSrch = slugify(state);
                 url = `${cors}/https://news.google.com/news?q=${stateSrch}+${nationalSrch}&output=rss`;
                 rss = fetchRequest(url, 'application/rss+xml', 'cors');
@@ -201,6 +202,7 @@ function getArticles(rssXml) {
     let rssJson = x2js.xml_str2json(rssXml);
     console.log(rssJson);
     let items = rssJson.rss.channel.item;
+
     // First item is a deprecation warning, not a news article
     if (items.length != undefined) {
         // Stop array from going out of bounds if there's less than five articles
@@ -209,12 +211,13 @@ function getArticles(rssXml) {
         }
         for (let i = 1; i <= ITEM_COUNT; i++) {
             let title = items[i].title;
-            let desc = getDescription(items[i].description);
+            let desc = getTextFromArticle('desc', items[i].description);
+            let site = getTextFromArticle('site', items[i].description);
             // Link is prefixed by a Google News URL separated by '&url='
             let link = items[i].link.split('&url=')[1]
             // TODO: Find an image search API and search the title to get an image
             let image = ''
-            articles.push(new Article(title, desc, link, image));
+            articles.push(new Article(title, desc, link, site));
         }
     }
     return articles
@@ -222,18 +225,25 @@ function getArticles(rssXml) {
 
 
 /**
- * Parses the HTML table in the RSS XML and uses a CSS selector to get the
- * description text
- * @param {string} descHtml The HTML table containing the description
+ * Parses the HTML table in the RSS XML and gets some text via a CSS selector
+ * @param {string} textType The type of text to extract, either 'desc' or
+ * 'site'
+ * @param {string} html The HTML table containing the description
  * @return {string} The description text extracted from the table
  */
-function getDescription(descHtml) {
-    console.log(descHtml);
+function getTextFromArticle(textType, html) {
     let parser = new DOMParser();
-    let selector = 'body > table > tbody > tr > td.j > font > div.lh > font:nth-child(5)';
-    let parsedDesc = parser.parseFromString(descHtml, 'text/html');
-    let desc = parsedDesc.querySelector(selector).innerHTML;
-    return desc;
+    let selector = ''
+
+    if (textType === 'desc') {
+        selector = 'body > table > tbody > tr > td.j > font > div.lh > font:nth-child(5)';
+    } else if (textType === 'site') {
+        selector = 'body > table > tbody > tr > td.j > font > div.lh > font:nth-child(3) > b > font';
+    }
+
+    let parsed = parser.parseFromString(html, 'text/html');
+    let text= parsed.querySelector(selector).innerHTML;
+    return text;
 }
 
 
@@ -245,7 +255,6 @@ function getDescription(descHtml) {
  * @return {string} The body of the response given to the fetch request
  */
 function fetchRequest(url, contentType, mode) {
-    console.log(url)
     return fetch(url, {
         cache: 'default',
         credentials: 'same-origin',
