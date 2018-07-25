@@ -227,7 +227,8 @@ function getArticles(rssXml) {
             ITEM_COUNT = item.length;
         }
         for (let i = 1; i <= ITEM_COUNT; i++) {
-            let title = items[i].title;
+            let fullTitle = items[i].title;
+            let title = fullTitle.split(' - ')[0];
             let desc = getTextFromArticle('desc', items[i].description);
             let site = getTextFromArticle('site', items[i].description);
             // Link is prefixed by a Google News URL separated by '&url='
@@ -259,8 +260,9 @@ function getTextFromArticle(textType, html) {
     }
 
     let parsed = parser.parseFromString(html, 'text/html');
-    let text= parsed.querySelector(selector).innerHTML;
-    return text;
+    let text = parsed.querySelector(selector).innerHTML;
+    let textNoTags = text.replace(/<(.|\n)*?>/g, '');
+    return textNoTags;
 }
 
 

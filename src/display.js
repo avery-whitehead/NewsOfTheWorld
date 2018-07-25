@@ -25,7 +25,7 @@ function setSidebarTitle(local, regional, national) {
  * Card structure:
  *  <div class="card">
  *      <div class="card-body">
- *          <h5 class="card-title"></h5>
+ *          <h5 class="card-title"><a></a></h5>
  *          <h6 class="card-subtitle mb-2 text-muted></h6>"
  *          <p class="card-text"></p>
  *      </div>
@@ -40,11 +40,41 @@ function setSidebarBody(articles) {
 
     articles.forEach(function (article) {
         article.printArticle();
+        // Create the card element
         let card = document.createElement('div');
         card.className = 'card';
+
         let cardBody = document.createElement('div');
         cardBody.className = 'card-body';
+        card.appendChild(cardBody);
+
         let cardTitle = document.createElement('h5');
         cardTitle.className = 'card-title';
+        cardBody.appendChild(cardTitle);
+
+        let cardTitleLink = document.createElement('a');
+        cardTitle.appendChild(cardTitleLink);
+
+        let cardSubtitle = document.createElement('h6');
+        cardSubtitle.className = 'card-subtitle';
+        cardBody.appendChild(cardSubtitle);
+
+        let cardText = document.createElement('p');
+        cardText.className = 'card-text';
+        cardBody.appendChild(cardText);
+
+        // Set the values of the element
+        cardTitleLink.innerHTML = article.title;
+        cardTitleLink.href = article.link;
+        cardSubtitle.innerHTML = article.site;
+        cardText.innerHTML = article.description;
+
+        // Add the card to the cards div
+        let cards = document.getElementById('cards')
+        console.log(cards);
+        console.log(card);
+        cards.appendChild(card)
     });
 }
+
+//TODO: Clear cards on new click, add CSS to cards
