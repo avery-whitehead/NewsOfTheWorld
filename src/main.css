@@ -62,3 +62,7 @@ img {
 .modal-body {
     color: rgb(97,97,97)
 }
+
+#cards .card {
+    margin-bottom: 15px;
+}

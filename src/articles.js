@@ -46,6 +46,7 @@ function loadMap() {
         document.getElementById('sidebar').style.display = 'block';
         // If not on mobile device, show sidebar at start
         let mobile = window.matchMedia('(max-width: 767px)');
+        searchNews('', '', '');
         if (!mobile.matches) {
             sidebar.show();
         }
@@ -102,18 +103,20 @@ function loadMap() {
 function onMapClick(event) {
     let latlng = event.latlng.wrap();
     console.log(latlng)
+    let cors = 'https://cors-anywhere.herokuapp.com';
     // Reverse address lookup from latlng
-    let url = 'https://eu1.locationiq.org/v1/reverse.php?key=ce51d023f628dc' +
+    let url = `${cors}/https://eu1.locationiq.org/v1/reverse.php?key=ce51d023f628dc` +
         `&lat=${latlng.lat}` +
         `&lon=${latlng.lng}` +
         '&format=json' +
         '&zoom=12' +
         '&addressdetails=1' + 
         '&extratags=1';
-    let address = fetchRequest(url, 'cors');
+    let address = fetchRequest(url, 'application/json', 'cors');
     // Resolves the promise returned from the fetch
     address.then(response => {
         let json = JSON.parse(response);
+        clearSidebarBody();
         setSidebarTitle(json);
         getAddressDetails(json);
     });
@@ -125,7 +128,6 @@ function onMapClick(event) {
  * @param {JSON} addressJson The address in JSON format
  */
 function getAddressDetails(addressJson) {
-    console.log(addressJson.address);
     let address = addressJson.address;
     let searchString = '';
     let local = '';
@@ -155,6 +157,8 @@ function getAddressDetails(addressJson) {
         national = 'China';
     if (national === 'ROC')
         national = 'Thailand';
+    if (national === 'RSA')
+        national = 'South Africa';
     setSidebarTitle(local, regional, national);
     searchNews(local, regional, national);
 }
@@ -185,16 +189,15 @@ function searchNews(local, regional, national) {
             `q=${localSrch}+${regionalSrch}&output=rss`;
     }
 
-    let rss = fetchRequest(url, 'cors');
+    let rss = fetchRequest(url, 'text/html', 'cors');
     rss.then(function(response) {
         articles = getArticles(response);
         // If no articles are returned by the local/regional search
         if (articles.length === 0 && didNationalSrch === false) {
             url = `${cors}/https://news.google.com/news?` + 
                 `q=${nationalSrch}&output=rss`;
-            rss = fetchRequest(url, 'cors');
+            rss = fetchRequest(url, 'text/html','cors');
             rss.then(function(response) {
-                console.log
                 articles = getArticles(response);
                 setSidebarBody(articles);
             })
@@ -217,7 +220,6 @@ function getArticles(rssXml) {
     let articles = [];
     let x2js = new X2JS();
     let rssJson = x2js.xml_str2json(rssXml);
-    console.log(rssJson);
     let items = rssJson.rss.channel.item;
 
     // First item is a deprecation warning, not a news article
@@ -269,6 +271,7 @@ function getTextFromArticle(textType, html) {
 /**
  * A generic fetch request to get some data from a REST API
  * @param {string} url The URI to fetch from
+ * @param {string} contentType The content type to put in the header
  * @param {string} mode The mode to be used for the request (cors, no-cors)
  * @return {string} The body of the response given to the fetch request
  */
