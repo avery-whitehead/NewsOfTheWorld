@@ -16,10 +16,10 @@ You can read the development blog for this project (which goes into a lot more d
 
 Desktop app:
 
-[!desktop map](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/desktop_map.jpg)
+![desktop map](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/desktop_map.jpg)
 
-[!desktop news](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/desktop_news.jpg)
+![desktop news](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/desktop_news.jpg)
 
 Mobile app:
 
-[!mobile news and app](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/mobile.png)
+![mobile news and app](https://raw.githubusercontent.com/james-whitehead/NewsOfTheWorld/master/examples/mobile.png)
